@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('存件管理')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('deposit')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">存件（寄存）管理</h5>
+                <span class="text-muted small">用户端存件申请 → 驿站接收上架（在库）→ 凭存件码取出</span>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <input class="form-control form-control-sm" id="qKeyword" placeholder="存件单号/存件码/物品/货架">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="qStatus">
+                                <option value="">全部状态</option>
+                                <option value="0">待到站</option>
+                                <option value="1">在库</option>
+                                <option value="2">已取出</option>
+                                <option value="3">已取消</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary btn-sm w-100" onclick="load(1)">查询</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>存件单号</th>
+                                <th>寄存学生</th>
+                                <th>物品</th>
+                                <th>数量</th>
+                                <th>存件码</th>
+                                <th>货架</th>
+                                <th>预计存放</th>
+                                <th>状态</th>
+                                <th>申请时间</th>
+                                <th style="width:170px">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap">
+                        <div class="text-muted small" id="pageInfo"></div>
+                        <div id="pager"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- 接收上架 -->
+<div class="modal fade" id="acceptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">接收存件并上架</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="aId">
+                <div class="mb-3">
+                    <label class="form-label">存件单号</label>
+                    <input class="form-control" id="aOrderNo" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">存件码</label>
+                    <input class="form-control" id="aCode" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">货架号</label>
+                    <select class="form-select" id="aShelfNo">
+                        <option value="">自动分配</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="doAccept()">确认上架</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var page = 1, size = 10, shelfLoaded = false;
+
+    function load(p) {
+        page = p || 1;
+        api.get('/api/deposit/page', {
+            page: page,
+            size: size,
+            keyword: $('#qKeyword').val().trim(),
+            status: $('#qStatus').val()
+        }).then(function (d) {
+            var html = '';
+            d.records.forEach(function (r) {
+                var ops = '';
+                if (r.status === 0) {
+                    ops += '<button class="btn btn-sm btn-success me-1" onclick="openAccept(' + r.id + ')">接收上架</button>';
+                }
+                if (r.status === 1) {
+                    ops += '<button class="btn btn-sm btn-outline-success" onclick="doOut(' + r.id + ')">办理取出</button>';
+                }
+                html += '<tr>'
+                    + '<td class="small">' + esc(r.orderNo) + '</td>'
+                    + '<td>' + esc(r.studentName || '-')
+                    + '<div class="text-muted small">' + esc(r.studentPhone || '') + '</div></td>'
+                    + '<td>' + esc(r.itemName) + '</td>'
+                    + '<td>' + (r.quantity || 1) + '</td>'
+                    + '<td class="fw-bold text-primary">' + esc(r.depositCode || '-') + '</td>'
+                    + '<td>' + esc(r.shelfNo || '-') + '</td>'
+                    + '<td class="small">' + (r.depositDays || 0) + ' 天</td>'
+                    + '<td>' + depositStatusBadge(r.status) + '</td>'
+                    + '<td class="small">' + esc(r.createTime) + '</td>'
+                    + '<td>' + (ops || '<span class="text-muted small">-</span>') + '</td></tr>';
+            });
+            $('#tbody').html(html || '<tr><td colspan="10" class="text-center text-muted py-4">暂无存件单</td></tr>');
+            renderPager($('#pager'), page, size, d.total, load);
+            $('#pageInfo').text('第 ' + page + ' 页');
+        });
+    }
+
+    function loadShelves() {
+        if (shelfLoaded) { return; }
+        api.get('/api/shelf/all').then(function (list) {
+            var html = '<option value="">自动分配</option>';
+            (list || []).forEach(function (s) {
+                html += '<option value="' + esc(s.shelfNo) + '">' + esc(s.shelfNo) + '</option>';
+            });
+            $('#aShelfNo').html(html);
+            shelfLoaded = true;
+        });
+    }
+
+    function openAccept(id) {
+        api.get('/api/deposit/detail/' + id).then(function (d) {
+            $('#aId').val(d.id);
+            $('#aOrderNo').val(d.orderNo);
+            $('#aCode').val(d.depositCode);
+            loadShelves();
+            $('#acceptModal').modal('show');
+        });
+    }
+
+    function doAccept() {
+        api.post('/api/deposit/accept', {
+            id: parseInt($('#aId').val()),
+            shelfNo: $('#aShelfNo').val()
+        }).then(function () {
+            toast('已接收并存件上架');
+            $('#acceptModal').modal('hide');
+            load(page);
+        });
+    }
+
+    function doOut(id) {
+        if (!confirm('确认该存件已被取走？')) return;
+        api.post('/api/deposit/out/' + id).then(function () {
+            toast('已办理取出');
+            load(page);
+        });
+    }
+
+    $(function () { load(1); });
+</script>
+</body>
+</html>

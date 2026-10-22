@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/student :: head('首页')}"></head>
+<body class="bg-light">
+<div th:replace="~{fragments/student :: navbar('index')}"></div>
+
+<div class="container py-4" style="max-width:640px">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="mb-1"><i class="bi bi-search"></i> 快件查询</h5>
+            <p class="text-muted small">输入手机号或快递单号即可查询（含驿站入库快件与别人寄给你的寄件订单），无需登录</p>
+            <div class="input-group mb-3">
+                <input class="form-control form-control-lg" id="keyword" placeholder="请输入手机号或快递单号">
+                <button class="btn btn-primary px-4" onclick="search()">查询</button>
+            </div>
+            <div id="result"></div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/student :: scripts}"></th:block>
+<th:block th:replace="~{fragments/student :: logoutScript}"></th:block>
+<script>
+    function search() {
+        var kw = $('#keyword').val().trim();
+        if (!kw) { toast('请输入手机号或快递单号', 'warning'); return; }
+        api.get('/api/student/query', {keyword: kw}).then(function (list) {
+            if (!list || list.length === 0) {
+                $('#result').html('<div class="alert alert-warning text-center mb-0">未查询到相关快件</div>');
+                return;
+            }
+            var html = '';
+            list.forEach(function (p) { html += studentQueryCardHtml(p); });
+            $('#result').html(html);
+        });
+    }
+
+    $(function () {
+        $('#keyword').on('keydown', function (e) { if (e.key === 'Enter') search(); });
+    });
+</script>
+</body>
+</html>

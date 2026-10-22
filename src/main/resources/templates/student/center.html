@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/student :: head('个人中心')}"></head>
+<body class="bg-light">
+<div th:replace="~{fragments/student :: navbar('center')}"></div>
+
+<div class="container py-4" style="max-width:1020px">
+    <div class="card">
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div class="fs-5 fw-bold"><i class="bi bi-person-circle text-primary"></i> <span id="sRealName">-</span></div>
+                <div class="text-muted small">
+                    账号 <span id="sUsername" class="fw-bold">-</span> · 手机号 <span id="sPhone" class="fw-bold">-</span>
+                </div>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" onclick="openProfile()">
+                <i class="bi bi-pencil"></i> 修改资料 / 密码
+            </button>
+        </div>
+    </div>
+
+    <ul class="nav nav-pills mb-3 flex-wrap gap-1" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-pkg" type="button">我的快递</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-recv" type="button">我的收件</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-send" type="button">我的寄件</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-new-send" type="button">我要寄件</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-dep" type="button">我的存件</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-new-dep" type="button">我要存件</button></li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- 我的快递 -->
+        <div class="tab-pane fade show active" id="t-pkg">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted small">手机号 <span id="pkgPhone" class="fw-bold"></span> 在驿站的收件记录</span>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadPkgs()">刷新</button>
+                    </div>
+                    <div id="pkgList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我的收件 -->
+        <div class="tab-pane fade" id="t-recv">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
+                            <select class="form-select form-select-sm" id="recvStatus">
+                                <option value="">全部状态</option>
+                                <option value="0">待揽收</option>
+                                <option value="1">已揽收</option>
+                                <option value="2">运输中</option>
+                                <option value="3">派送中</option>
+                                <option value="4">已签收</option>
+                                <option value="5">已取消</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <button class="btn btn-primary btn-sm w-100" onclick="loadRecvs(1)">查询</button>
+                        </div>
+                        <div class="col-12 col-md-7 d-flex align-items-center">
+                            <span class="text-muted small">
+                                别人在线寄给手机号 <span id="recvPhone" class="fw-bold">-</span> 的包裹，在这里跟踪物流
+                            </span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>寄件单号</th>
+                                <th>快递公司</th>
+                                <th>运单号</th>
+                                <th>寄件人</th>
+                                <th>状态</th>
+                                <th>下单时间</th>
+                                <th style="width:90px">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="recvBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap">
+                        <div class="text-muted small" id="recvPageInfo"></div>
+                        <div id="recvPager"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我的寄件 -->
+        <div class="tab-pane fade" id="t-send">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
+                            <select class="form-select form-select-sm" id="sendStatus">
+                                <option value="">全部状态</option>
+                                <option value="0">待揽收</option>
+                                <option value="1">已揽收</option>
+                                <option value="2">运输中</option>
+                                <option value="3">派送中</option>
+                                <option value="4">已签收</option>
+                                <option value="5">已取消</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <button class="btn btn-primary btn-sm w-100" onclick="loadSends(1)">查询</button>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <button class="btn btn-success btn-sm w-100" onclick="goTab('#t-new-send')">
+                                <i class="bi bi-plus-lg"></i> 我要寄件
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>寄件单号</th>
+                                <th>快递公司</th>
+                                <th>运单号</th>
+                                <th>收件人</th>
+                                <th>状态</th>
+                                <th>下单时间</th>
+                                <th style="width:170px">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="sendBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap">
+                        <div class="text-muted small" id="sendPageInfo"></div>
+                        <div id="sendPager"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我要寄件 -->
+        <div class="tab-pane fade" id="t-new-send">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-send me-1"></i>寄件下单</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">快递公司 <span class="text-danger">*</span></label>
+                            <select class="form-select" id="fCompany"></select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">寄件人姓名 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="fSenderName">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">寄件人手机号 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="fSenderPhone">
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">取件地点 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="fSenderAddress" placeholder="如：3号宿舍楼一楼 / 校园驿站">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">期望取件时间</label>
+                            <input type="datetime-local" class="form-control" id="fExpectTime">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">收件人姓名 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="fReceiverName">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">收件人手机号 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="fReceiverPhone">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">物品名称 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="fItemName" placeholder="如：衣物 / 书籍">
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">收件地址 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="fReceiverAddress" placeholder="省市区 + 详细地址">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">重量(kg)</label>
+                            <input class="form-control" id="fWeight" placeholder="选填">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">备注</label>
+                            <input class="form-control" id="fRemark" placeholder="选填，如：易碎品">
+                        </div>
+                    </div>
+                    <div class="alert alert-danger d-none" id="sendError"></div>
+                    <div class="alert alert-success d-none" id="sendSuccess"></div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary px-4" id="btnSubmitSend" onclick="submitSend()">
+                            <i class="bi bi-check-lg"></i> 提交寄件
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="resetSendForm()">重置</button>
+                    </div>
+                    <div class="alert alert-light border small mt-3 mb-0">
+                        提交后请把物品送到驿站；驿站揽收后会回填运单号并更新物流，你可以在「我的寄件」中查看轨迹。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我的存件 -->
+        <div class="tab-pane fade" id="t-dep">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <span class="text-muted small">存件（寄存）申请记录，凭存件码到驿站办理存取</span>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadDeps()">刷新</button>
+                            <button class="btn btn-sm btn-success" onclick="goTab('#t-new-dep')">
+                                <i class="bi bi-plus-lg"></i> 我要存件
+                            </button>
+                        </div>
+                    </div>
+                    <div id="depList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我要存件 -->
+        <div class="tab-pane fade" id="t-new-dep">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-archive me-1"></i>存件（寄存）申请</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">物品名称 <span class="text-danger">*</span></label>
+                            <input class="form-control" id="dItemName" placeholder="如：考研资料 / 行李箱">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">数量</label>
+                            <input type="number" min="1" value="1" class="form-control" id="dQuantity">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">预计存放天数</label>
+                            <input type="number" min="1" value="3" class="form-control" id="dDepositDays">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">预计送达驿站时间</label>
+                            <input type="datetime-local" class="form-control" id="dExpectTime">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">备注</label>
+                            <input class="form-control" id="dRemark" placeholder="选填，如：请勿挤压">
+                        </div>
+                    </div>
+                    <div class="alert alert-danger d-none" id="depError"></div>
+                    <div class="alert alert-success d-none" id="depSuccess"></div>
+                    <button class="btn btn-success px-4" id="btnSubmitDeposit" onclick="submitDeposit()">
+                        <i class="bi bi-check-lg"></i> 提交存件申请
+                    </button>
+                    <div class="alert alert-light border small mt-3 mb-0">
+                        提交后会生成 6 位存件码，请把物品和存件码交给驿站；驿站接收上架后状态变为「在库」，取回时由驿站办理取出。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 物流轨迹 -->
+<div class="modal fade" id="trackModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">物流轨迹 <span class="text-muted small" id="trackNo"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="list-unstyled mb-0" id="trackList"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 修改资料 -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改资料 / 密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">账号</label>
+                    <input class="form-control" id="pUsername" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">姓名</label>
+                    <input class="form-control" id="pRealName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">手机号</label>
+                    <input class="form-control" id="pPhone" placeholder="修改后「我的快递」将按新手机号查询">
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <label class="form-label">原密码</label>
+                    <input type="password" class="form-control" id="pOldPwd" placeholder="不修改密码可留空">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">新密码</label>
+                    <input type="password" class="form-control" id="pNewPwd" placeholder="不修改密码可留空">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="saveProfile()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/student :: scripts}"></th:block>
+<th:block th:replace="~{fragments/student :: logoutScript}"></th:block>
+<script>
+    var sendPage = 1, sendSize = 10, recvPage = 1, recvSize = 10, profile = null;
+
+    function goTab(target) {
+        var btn = document.querySelector('button[data-bs-target="' + target + '"]');
+        if (btn) { new bootstrap.Tab(btn).show(); }
+    }
+
+    // ---------- 个人资料 ----------
+    function loadProfile() {
+        api.get('/api/student/profile').then(function (d) {
+            profile = d;
+            $('#sRealName').text(d.realName || '-');
+            $('#sUsername').text(d.username || '-');
+            $('#sPhone').text(d.phone || '-');
+            $('#pkgPhone').text(d.phone || '-');
+            $('#recvPhone').text(d.phone || '-');
+            if (!$('#fSenderName').val()) { $('#fSenderName').val(d.realName || ''); }
+            if (!$('#fSenderPhone').val()) { $('#fSenderPhone').val(d.phone || ''); }
+        });
+    }
+
+    function openProfile() {
+        if (!profile) { return; }
+        $('#pUsername').val(profile.username);
+        $('#pRealName').val(profile.realName);
+        $('#pPhone').val(profile.phone);
+        $('#pOldPwd,#pNewPwd').val('');
+        $('#profileModal').modal('show');
+    }
+
+    function saveProfile() {
+        var data = {
+            realName: $('#pRealName').val().trim(),
+            phone: $('#pPhone').val().trim(),
+            oldPassword: $('#pOldPwd').val(),
+            newPassword: $('#pNewPwd').val()
+        };
+        if (!data.realName || !data.phone) { toast('请填写姓名和手机号', 'warning'); return; }
+        api.put('/api/student/profile', data).then(function () {
+            toast('保存成功');
+            $('#profileModal').modal('hide');
+            loadProfile();
+            loadPkgs();
+        });
+    }
+
+    // ---------- 我的快递 ----------
+    function loadPkgs() {
+        api.get('/api/student/packages').then(function (list) {
+            if (!list || list.length === 0) {
+                $('#pkgList').html('<div class="text-muted small text-center py-4">暂无收件记录，快件到达驿站后会在这里显示取件码；别人在线寄给你的包裹可在「我的收件」查看</div>');
+                return;
+            }
+            var html = '';
+            list.forEach(function (p) { html += packageCardHtml(p); });
+            $('#pkgList').html(html);
+        });
+    }
+
+    // ---------- 我的收件（别人在线寄给我：按登录手机号匹配收件人） ----------
+    function loadRecvs(p) {
+        recvPage = p || 1;
+        var params = {page: recvPage, size: recvSize};
+        var st = $('#recvStatus').val();
+        if (st !== '') { params.status = st; }
+        api.get('/api/student/send/receive/page', params).then(function (d) {
+            var html = '';
+            d.records.forEach(function (r) {
+                html += '<tr>'
+                    + '<td class="small">' + esc(r.orderNo) + '</td>'
+                    + '<td>' + esc(r.companyName || '-') + '</td>'
+                    + '<td class="small">' + esc(r.trackingNo || '-') + '</td>'
+                    + '<td>' + esc(r.senderName || '-') + '<div class="text-muted small">' + esc(r.senderPhone || '') + '</div></td>'
+                    + '<td>' + sendStatusBadge(r.status) + '</td>'
+                    + '<td class="small">' + esc(r.createTime) + '</td>'
+                    + '<td><button class="btn btn-sm btn-outline-primary" onclick="openTrack(' + r.id + ')">物流</button></td></tr>';
+            });
+            $('#recvBody').html(html || '<tr><td colspan="7" class="text-center text-muted py-4">暂无收件记录：别人在线寄给你的包裹会显示在这里</td></tr>');
+            renderPager($('#recvPager'), recvPage, recvSize, d.total, loadRecvs);
+            $('#recvPageInfo').text('第 ' + recvPage + ' 页');
+        });
+    }
+
+    // ---------- 我的寄件 ----------
+    function loadSends(p) {
+        sendPage = p || 1;
+        api.get('/api/student/send/page', {
+            page: sendPage,
+            size: sendSize,
+            status: $('#sendStatus').val()
+        }).then(function (d) {
+            var html = '';
+            d.records.forEach(function (r) {
+                var ops = '<button class="btn btn-sm btn-outline-primary me-1" onclick="openTrack(' + r.id + ')">物流</button>';
+                if (r.status === 0) {
+                    ops += '<button class="btn btn-sm btn-outline-danger" onclick="cancelSend(' + r.id + ')">取消</button>';
+                }
+                html += '<tr>'
+                    + '<td class="small">' + esc(r.orderNo) + '</td>'
+                    + '<td>' + esc(r.companyName || '-') + '</td>'
+                    + '<td class="small">' + esc(r.trackingNo || '-') + '</td>'
+                    + '<td>' + esc(r.receiverName) + '<div class="text-muted small">' + esc(r.receiverPhone) + '</div></td>'
+                    + '<td>' + sendStatusBadge(r.status) + '</td>'
+                    + '<td class="small">' + esc(r.createTime) + '</td>'
+                    + '<td>' + ops + '</td></tr>';
+            });
+            $('#sendBody').html(html || '<tr><td colspan="7" class="text-center text-muted py-4">暂无寄件记录</td></tr>');
+            renderPager($('#sendPager'), sendPage, sendSize, d.total, loadSends);
+            $('#sendPageInfo').text('第 ' + sendPage + ' 页');
+        });
+    }
+
+    function cancelSend(id) {
+        if (!confirm('确认取消该寄件订单？')) return;
+        api.post('/api/student/send/cancel/' + id).then(function () {
+            toast('已取消寄件订单');
+            loadSends(sendPage);
+        });
+    }
+
+    function openTrack(id) {
+        $('#trackList').html('<li class="text-muted small">加载中...</li>');
+        $('#trackModal').modal('show');
+        api.get('/api/student/send/logs/' + id).then(function (logs) {
+            renderTimeline($('#trackList'), logs);
+        });
+    }
+</script>
+<script>
+    // ---------- 表单反馈 / 校验工具 ----------
+    // 行内提示：msg 为空则隐藏；显示时自动滚动到提示位置，避免"点了没反应"的错觉
+    function formFeedback(id, msg, type) {
+        var el = document.getElementById(id);
+        if (!msg) {
+            el.classList.add('d-none');
+            el.innerHTML = '';
+            return;
+        }
+        type = type || 'danger';
+        el.className = 'alert alert-' + type;
+        el.innerHTML = '<i class="bi bi-' + (type === 'danger' ? 'exclamation-triangle-fill' : 'check-circle-fill')
+            + ' me-1"></i>' + msg;
+        el.scrollIntoView({block: 'center', behavior: 'smooth'});
+    }
+
+    // 寄件表单必填项：控件选择器 / 字段名 / 中文名
+    var SEND_REQUIRED = [
+        ['#fCompany', 'companyId', '快递公司'],
+        ['#fSenderName', 'senderName', '寄件人姓名'],
+        ['#fSenderPhone', 'senderPhone', '寄件人手机号'],
+        ['#fSenderAddress', 'senderAddress', '取件地点'],
+        ['#fReceiverName', 'receiverName', '收件人姓名'],
+        ['#fReceiverPhone', 'receiverPhone', '收件人手机号'],
+        ['#fReceiverAddress', 'receiverAddress', '收件地址'],
+        ['#fItemName', 'itemName', '物品名称']
+    ];
+
+    function resetSendInvalid() {
+        SEND_REQUIRED.forEach(function (f) { $(f[0]).removeClass('is-invalid'); });
+        $('#fWeight').removeClass('is-invalid');
+    }
+
+    // ---------- 寄件下单 ----------
+    function loadCompanies() {
+        api.get('/api/student/companies').then(function (list) {
+            var html = '<option value="">请选择快递公司</option>';
+            (list || []).forEach(function (c) {
+                html += '<option value="' + c.id + '">' + esc(c.companyName) + '</option>';
+            });
+            $('#fCompany').html(html);
+        });
+    }
+
+    function resetSendForm() {
+        $('#fCompany').val('');
+        $('#fSenderAddress,#fExpectTime,#fReceiverName,#fReceiverPhone,#fReceiverAddress,#fItemName,#fWeight,#fRemark').val('');
+        if (profile) {
+            $('#fSenderName').val(profile.realName || '');
+            $('#fSenderPhone').val(profile.phone || '');
+        }
+    }
+
+    function submitSend() {
+        formFeedback('sendError', '');
+        formFeedback('sendSuccess', '');
+        resetSendInvalid();
+        try {
+            var data = {
+                companyId: $('#fCompany').val() ? parseInt($('#fCompany').val()) : null,
+                senderName: $('#fSenderName').val().trim(),
+                senderPhone: $('#fSenderPhone').val().trim(),
+                senderAddress: $('#fSenderAddress').val().trim(),
+                receiverName: $('#fReceiverName').val().trim(),
+                receiverPhone: $('#fReceiverPhone').val().trim(),
+                receiverAddress: $('#fReceiverAddress').val().trim(),
+                itemName: $('#fItemName').val().trim(),
+                weight: $('#fWeight').val().trim() ? parseFloat($('#fWeight').val()) : null,
+                expectTime: toTimeStr($('#fExpectTime').val()),
+                remark: $('#fRemark').val().trim()
+            };
+
+            // 1) 必填项校验：输入框标红 + 行内红色提示 + 自动滚动
+            var missing = [];
+            SEND_REQUIRED.forEach(function (f) {
+                if (!data[f[1]]) {
+                    $(f[0]).addClass('is-invalid');
+                    missing.push(f[2]);
+                }
+            });
+            if (missing.length) {
+                formFeedback('sendError', '还有必填项未完成：<b>' + missing.join('、') + '</b>', 'danger');
+                return;
+            }
+
+            // 2) 格式校验
+            if (!/^1\d{10}$/.test(data.senderPhone)) {
+                $('#fSenderPhone').addClass('is-invalid');
+                formFeedback('sendError', '寄件人手机号需为 11 位手机号', 'danger');
+                return;
+            }
+            if (!/^1\d{10}$/.test(data.receiverPhone)) {
+                $('#fReceiverPhone').addClass('is-invalid');
+                formFeedback('sendError', '收件人手机号需为 11 位手机号', 'danger');
+                return;
+            }
+            if (data.weight !== null && (isNaN(data.weight) || data.weight <= 0)) {
+                $('#fWeight').addClass('is-invalid');
+                formFeedback('sendError', '重量请填写大于 0 的数字（也可以不填）', 'danger');
+                return;
+            }
+
+            // 3) 提交：按钮进入加载态，成功/失败都在表单内给出反馈
+            var $btn = $('#btnSubmitSend');
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>提交中...');
+            api.post('/api/student/send', data).then(function (d) {
+                toast('寄件下单成功，寄件单号 ' + d.orderNo);
+                var ok = document.getElementById('sendSuccess');
+                ok.className = 'alert alert-success';
+                ok.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>寄件下单成功！寄件单号 <b>' + esc(d.orderNo)
+                    + '</b>（' + esc(d.statusDesc) + '）。请把物品交给驿站，揽收后可在「我的寄件」查看物流。 '
+                    + '<button type="button" class="btn btn-sm btn-outline-success ms-1" onclick="goTab(\'#t-send\')">查看我的寄件</button>';
+                loadSends(1);
+                resetSendForm();
+            }).always(function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-lg"></i> 提交寄件');
+            });
+        } catch (e) {
+            formFeedback('sendError', '提交出错：' + esc(e.message), 'danger');
+            $('#btnSubmitSend').prop('disabled', false).html('<i class="bi bi-check-lg"></i> 提交寄件');
+        }
+    }
+
+    // ---------- 存件 ----------
+    function loadDeps() {
+        api.get('/api/student/deposit/page', {page: 1, size: 50}).then(function (d) {
+            if (!d.records || d.records.length === 0) {
+                $('#depList').html('<div class="text-muted small text-center py-4">暂无存件记录</div>');
+                return;
+            }
+            var html = '';
+            d.records.forEach(function (r) {
+                html += '<div class="border rounded p-3 mb-3">'
+                    + '<div class="d-flex justify-content-between align-items-center mb-2">'
+                    + '<span class="fw-bold">' + esc(r.itemName) + ' × ' + (r.quantity || 1) + '</span>'
+                    + depositStatusBadge(r.status) + '</div>'
+                    + '<div class="small text-muted">存件单号：' + esc(r.orderNo) + '</div>'
+                    + '<div class="small text-muted">申请时间：' + esc(r.createTime)
+                    + ' · 预计存放 ' + (r.depositDays || 0) + ' 天</div>';
+                if (r.status === 0 || r.status === 1) {
+                    html += '<div class="mt-2 p-2 bg-light rounded text-center">'
+                        + '<div class="text-muted small">存件码</div>'
+                        + '<div class="fs-4 fw-bold text-primary">' + esc(r.depositCode) + '</div>'
+                        + '<div class="text-muted small">'
+                        + (r.shelfNo ? '货架：' + esc(r.shelfNo) + '，' : '')
+                        + '请凭存件码到驿站办理</div></div>';
+                }
+                if (r.inTime) { html += '<div class="small text-muted mt-1">上架时间：' + esc(r.inTime) + '</div>'; }
+                if (r.outTime) { html += '<div class="small text-muted mt-1">取出时间：' + esc(r.outTime) + '</div>'; }
+                if (r.status === 0) {
+                    html += '<button class="btn btn-sm btn-outline-danger mt-2" onclick="cancelDep(' + r.id + ')">取消申请</button>';
+                }
+                html += '</div>';
+            });
+            $('#depList').html(html);
+        });
+    }
+
+    function cancelDep(id) {
+        if (!confirm('确认取消该存件申请？')) return;
+        api.post('/api/student/deposit/cancel/' + id).then(function () {
+            toast('已取消存件申请');
+            loadDeps();
+        });
+    }
+
+    function submitDeposit() {
+        formFeedback('depError', '');
+        formFeedback('depSuccess', '');
+        $('#dItemName').removeClass('is-invalid');
+        try {
+            var itemName = $('#dItemName').val().trim();
+            if (!itemName) {
+                $('#dItemName').addClass('is-invalid');
+                formFeedback('depError', '还有必填项未完成：<b>物品名称</b>', 'danger');
+                return;
+            }
+            var data = {
+                itemName: itemName,
+                quantity: parseInt($('#dQuantity').val()) || 1,
+                depositDays: parseInt($('#dDepositDays').val()) || 3,
+                expectTime: toTimeStr($('#dExpectTime').val()),
+                remark: $('#dRemark').val().trim()
+            };
+
+            var $btn = $('#btnSubmitDeposit');
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>提交中...');
+            api.post('/api/student/deposit', data).then(function (d) {
+                toast('存件申请成功，存件码 ' + d.depositCode);
+                var ok = document.getElementById('depSuccess');
+                ok.className = 'alert alert-success';
+                ok.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>存件申请成功！存件单号 <b>' + esc(d.orderNo)
+                    + '</b>，存件码 <b class="fs-5">' + esc(d.depositCode) + '</b>（' + esc(d.statusDesc)
+                    + '）。请凭存件码把物品交给驿站。 '
+                    + '<button type="button" class="btn btn-sm btn-outline-success ms-1" onclick="goTab(\'#t-dep\')">查看我的存件</button>';
+                $('#dItemName,#dExpectTime,#dRemark').val('');
+                $('#dQuantity').val(1);
+                $('#dDepositDays').val(3);
+                loadDeps();
+            }).always(function () {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-lg"></i> 提交存件申请');
+            });
+        } catch (e) {
+            formFeedback('depError', '提交出错：' + esc(e.message), 'danger');
+            $('#btnSubmitDeposit').prop('disabled', false).html('<i class="bi bi-check-lg"></i> 提交存件申请');
+        }
+    }
+
+    $(function () {
+        loadProfile();
+        loadCompanies();
+        loadPkgs();
+        loadRecvs(1);
+        loadSends(1);
+        loadDeps();
+    });
+</script>
+</body>
+</html>

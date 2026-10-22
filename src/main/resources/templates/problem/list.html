@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('问题件管理')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('problem')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">问题件管理</h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#regModal"><i class="bi bi-plus-lg"></i> 登记问题件</button>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3"><input class="form-control form-control-sm" id="qKeyword" placeholder="单号/问题描述"></div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="qType">
+                                <option value="">全部类型</option>
+                                <option value="STAY">滞留</option>
+                                <option value="WRONG">错件</option>
+                                <option value="DAMAGE">破损</option>
+                                <option value="LOST">丢件</option>
+                                <option value="REJECT">拒收</option>
+                                <option value="RETURN">退回</option>
+                                <option value="OTHER">其他</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="qHandle">
+                                <option value="">全部处理状态</option>
+                                <option value="0">待处理</option>
+                                <option value="1">处理中</option>
+                                <option value="2">已处理</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"><button class="btn btn-primary btn-sm w-100" onclick="load(1)">查询</button></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>快递单号</th>
+                                <th>收件人</th>
+                                <th>公司</th>
+                                <th>问题类型</th>
+                                <th>问题描述</th>
+                                <th>处理状态</th>
+                                <th>登记时间</th>
+                                <th>处理结果</th>
+                                <th style="width:90px">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap"><div class="text-muted small" id="pageInfo"></div><div id="pager"></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- 登记问题件弹窗 -->
+<div class="modal fade" id="regModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">登记问题件</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">快递单号</label>
+                    <div class="input-group">
+                        <input class="form-control" id="regTracking" placeholder="输入快递单号">
+                        <button class="btn btn-outline-secondary" onclick="searchPkg()">查询</button>
+                    </div>
+                    <div class="form-text" id="regPkgInfo"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">问题类型</label>
+                    <select class="form-select" id="regType">
+                        <option value="STAY">滞留</option>
+                        <option value="WRONG">错件</option>
+                        <option value="DAMAGE">破损</option>
+                        <option value="LOST">丢件</option>
+                        <option value="REJECT">拒收</option>
+                        <option value="RETURN">退回</option>
+                        <option value="OTHER">其他</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">问题描述</label>
+                    <textarea class="form-control" id="regDesc" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="doRegister()">提交登记</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 处理问题件弹窗 -->
+<div class="modal fade" id="handleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">处理问题件</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="hId">
+                <div class="mb-3">
+                    <label class="form-label">处理状态</label>
+                    <select class="form-select" id="hStatus">
+                        <option value="0">待处理</option>
+                        <option value="1">处理中</option>
+                        <option value="2">已处理</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">处理结果</label>
+                    <textarea class="form-control" id="hResult" rows="2"></textarea>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="hReturned">
+                    <label class="form-check-label" for="hReturned">同时将快件标记为「已退回」</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="doHandle()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var page = 1, size = 10;
+    var isAdmin = /*[[${session.loginUser.roleCode == 'SUPER_ADMIN'}]]*/ false;
+    var selectedPkgId = null;
+
+    function load(p) {
+        page = p || 1;
+        api.get('/api/problem/page', {
+            page: page, size: size,
+            keyword: $('#qKeyword').val().trim(),
+            problemType: $('#qType').val(),
+            handleStatus: $('#qHandle').val()
+        }).then(function (d) {
+            renderRows(d.records);
+            renderPager($('#pager'), page, size, d.total, load);
+            $('#pageInfo').text('第 ' + page + ' 页');
+        });
+    }
+
+    function renderRows(list) {
+        var html = '';
+        list.forEach(function (r) {
+            var action = isAdmin ? '<button class="btn btn-sm btn-outline-primary" onclick="openHandle(' + r.id + ')">处理</button>' : '-';
+            html += '<tr>'
+                + '<td>' + esc(r.trackingNo) + '</td>'
+                + '<td>' + esc(r.receiverName) + '</td>'
+                + '<td>' + esc(r.companyName) + '</td>'
+                + '<td><span class="badge-soft text-bg-secondary">' + esc(r.problemTypeDesc) + '</span></td>'
+                + '<td class="small">' + esc(r.problemDesc) + '</td>'
+                + '<td>' + statusBadge(r.handleStatus, r.handleStatusDesc) + '</td>'
+                + '<td class="small">' + esc(r.createTime) + '</td>'
+                + '<td class="small">' + esc(r.handleResult) + '</td>'
+                + '<td>' + action + '</td>'
+                + '</tr>';
+        });
+        $('#tbody').html(html || '<tr><td colspan="9" class="text-center text-muted py-4">暂无数据</td></tr>');
+    }
+
+    function searchPkg() {
+        var tracking = $('#regTracking').val().trim();
+        if (!tracking) { toast('请输入快递单号', 'warning'); return; }
+        api.get('/api/package/page', {keyword: tracking, size: 10}).then(function (d) {
+            var found = null;
+            d.records.forEach(function (r) { if (r.trackingNo === tracking) found = r; });
+            if (!found) {
+                $('#regPkgInfo').html('<span class="text-danger">未找到该快件</span>');
+                selectedPkgId = null;
+                return;
+            }
+            selectedPkgId = found.id;
+            $('#regPkgInfo').html('<span class="text-success">' + esc(found.trackingNo) + ' · ' + esc(found.receiverName) + ' ' + esc(found.receiverPhone) + ' · ' + esc(found.statusDesc) + '</span>');
+        });
+    }
+
+    function doRegister() {
+        if (!selectedPkgId) { toast('请先查询并确认快件', 'warning'); return; }
+        api.post('/api/problem/register', {
+            packageId: selectedPkgId,
+            problemType: $('#regType').val(),
+            problemDesc: $('#regDesc').val().trim()
+        }).then(function () {
+            toast('登记成功');
+            $('#regModal').modal('hide');
+            $('#regTracking,#regDesc').val('');
+            $('#regPkgInfo').html('');
+            selectedPkgId = null;
+            load(page);
+        });
+    }
+
+    function openHandle(id) {
+        $('#hId').val(id);
+        $('#hStatus').val(0);
+        $('#hResult').val('');
+        $('#hReturned').prop('checked', false);
+        $('#handleModal').modal('show');
+    }
+
+    function doHandle() {
+        api.post('/api/problem/handle/' + $('#hId').val(), {
+            handleStatus: parseInt($('#hStatus').val()),
+            handleResult: $('#hResult').val().trim(),
+            returned: $('#hReturned').is(':checked')
+        }).then(function () {
+            toast('处理成功');
+            $('#handleModal').modal('hide');
+            load(page);
+        });
+    }
+
+    $(function () { load(1); });
+</script>
+</body>
+</html>

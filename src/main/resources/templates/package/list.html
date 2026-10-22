@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('快件列表')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('list')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <h5 class="mb-3">快件列表</h5>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <input class="form-control form-control-sm" id="qKeyword" placeholder="单号/手机号/姓名/取件码">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="qStatus">
+                                <option value="">全部状态</option>
+                                <option value="0">已入库待通知</option>
+                                <option value="1">已通知待取件</option>
+                                <option value="2">已取件</option>
+                                <option value="3">滞留</option>
+                                <option value="4">问题件</option>
+                                <option value="5">已退回</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="qCompany">
+                                <option value="">全部公司</option>
+                                <option th:each="c : ${companies}" th:value="${c.id}" th:text="${c.companyName}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control form-control-sm" id="qDateStart">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control form-control-sm" id="qDateEnd">
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-primary btn-sm w-100" onclick="load(1)">查询</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>快递单号</th>
+                                <th>公司</th>
+                                <th>收件人</th>
+                                <th>手机号</th>
+                                <th>取件码</th>
+                                <th>货架</th>
+                                <th>状态</th>
+                                <th>入库时间</th>
+                                <th>取件时间</th>
+                                <th style="width:220px">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap">
+                        <div class="text-muted small" id="pageInfo"></div>
+                        <div id="pager"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var page = 1, size = 10;
+    var isAdmin = /*[[${session.loginUser.roleCode == 'SUPER_ADMIN'}]]*/ false;
+
+    function load(p) {
+        page = p || 1;
+        api.get('/api/package/page', {
+            page: page, size: size,
+            keyword: $('#qKeyword').val().trim(),
+            status: $('#qStatus').val(),
+            companyId: $('#qCompany').val(),
+            dateStart: $('#qDateStart').val(),
+            dateEnd: $('#qDateEnd').val()
+        }).then(function (d) {
+            renderRows(d.records);
+            renderPager($('#pager'), page, size, d.total, load);
+            $('#pageInfo').text('第 ' + page + ' 页');
+        });
+    }
+
+    function renderRows(list) {
+        var html = '';
+        list.forEach(function (p) {
+            var actions = '';
+            if (p.status === 0 || p.status === 3) actions += '<button class="btn btn-sm btn-outline-primary me-1" onclick="notice(' + p.id + ')">通知</button>';
+            if (p.status === 1 || p.status === 3) actions += '<button class="btn btn-sm btn-outline-success me-1" onclick="goPickup(\'' + esc(p.trackingNo) + '\')">取件</button>';
+            actions += '<a class="btn btn-sm btn-outline-secondary me-1" href="/package/detail/' + p.id + '">详情</a>';
+            if (isAdmin) actions += '<button class="btn btn-sm btn-outline-danger" onclick="del(' + p.id + ')">删除</button>';
+            html += '<tr>'
+                + '<td>' + esc(p.trackingNo) + '</td>'
+                + '<td>' + esc(p.companyName) + '</td>'
+                + '<td>' + esc(p.receiverName) + '</td>'
+                + '<td>' + esc(p.receiverPhone) + '</td>'
+                + '<td class="fw-bold">' + esc(p.pickupCode) + '</td>'
+                + '<td>' + esc(p.shelfNo) + '</td>'
+                + '<td>' + statusBadge(p.status, p.statusDesc) + '</td>'
+                + '<td class="small">' + esc(p.inTime) + '</td>'
+                + '<td class="small">' + esc(p.pickupTime) + '</td>'
+                + '<td>' + actions + '</td>'
+                + '</tr>';
+        });
+        $('#tbody').html(html || '<tr><td colspan="10" class="text-center text-muted py-4">暂无数据</td></tr>');
+    }
+
+    function notice(id) {
+        if (!confirm('确认向该快件发送取件通知？')) return;
+        api.post('/api/package/notice/' + id).then(function () {
+            toast('通知发送成功');
+            load(page);
+        });
+    }
+
+    function goPickup(trackingNo) {
+        location.href = '/package/pickup?tracking=' + encodeURIComponent(trackingNo);
+    }
+
+    function del(id) {
+        if (!confirm('确认删除该快件记录？')) return;
+        api.del('/api/package/' + id).then(function () {
+            toast('删除成功');
+            load(page);
+        });
+    }
+
+    $(function () {
+        load(1);
+    });
+</script>
+</body>
+</html>

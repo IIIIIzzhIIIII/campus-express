@@ -1,0 +1,24 @@
+# 统一换行符处理，避免 Windows / Linux 协作时整文件 diff
+* text=auto
+
+*.java   text
+*.xml    text
+*.yml    text
+*.yaml   text
+*.sql    text
+*.md     text
+*.html   text
+*.css    text
+*.js     text
+*.ps1    text
+*.cmd    text
+*.bat    text
+mvnw     text eol=lf
+
+# 二进制资源
+*.woff   binary
+*.woff2  binary
+*.png    binary
+*.jpg    binary
+*.ico    binary
+*.jar    binary

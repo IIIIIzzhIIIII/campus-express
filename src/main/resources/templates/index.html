@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('工作台')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('index')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <h5 class="mb-3">工作台</h5>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="stat-card">
+                        <div class="icon" style="background:#0d6efd"><i class="bi bi-inboxes"></i></div>
+                        <div><div class="num" id="todayIn">0</div><div class="label">今日入库</div></div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="stat-card">
+                        <div class="icon" style="background:#16a34a"><i class="bi bi-box-seam"></i></div>
+                        <div><div class="num" id="todayOut">0</div><div class="label">今日取件</div></div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="stat-card">
+                        <div class="icon" style="background:#0dcaf0"><i class="bi bi-clock"></i></div>
+                        <div><div class="num" id="pendingCount">0</div><div class="label">待取件</div></div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="stat-card">
+                        <div class="icon" style="background:#dc2626"><i class="bi bi-hourglass-split"></i></div>
+                        <div><div class="num" id="stayCount">0</div><div class="label">滞留件</div></div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="stat-card">
+                        <div class="icon" style="background:#f59e0b"><i class="bi bi-exclamation-triangle"></i></div>
+                        <div><div class="num" id="problemCount">0</div><div class="label">待处理问题件</div></div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                    <div class="stat-card">
+                        <div class="icon" style="background:#6b7280"><i class="bi bi-boxes"></i></div>
+                        <div><div class="num" id="totalCount">0</div><div class="label">累计快件</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-8">
+                    <div class="card h-100">
+                        <div class="card-header">近 14 天入库 / 取件趋势</div>
+                        <div class="card-body"><div id="trendChart" style="height:320px"></div></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header">快递公司占比</div>
+                        <div class="card-body"><div id="companyChart" style="height:320px"></div></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    function loadOverview() {
+        api.get('/api/stat/overview').then(function (d) {
+            $('#todayIn').text(d.todayIn || 0);
+            $('#todayOut').text(d.todayOut || 0);
+            $('#pendingCount').text(d.pendingCount || 0);
+            $('#stayCount').text(d.stayCount || 0);
+            $('#problemCount').text(d.problemCount || 0);
+            $('#totalCount').text(d.totalCount || 0);
+        });
+    }
+
+    function loadTrend() {
+        api.get('/api/stat/daily', {days: 14}).then(function (list) {
+            var dates = [], ins = [], outs = [];
+            list.forEach(function (r) {
+                dates.push(r.date.substring(5));
+                ins.push(r.inCount || 0);
+                outs.push(r.outCount || 0);
+            });
+            var chart = echarts.init(document.getElementById('trendChart'));
+            chart.setOption({
+                tooltip: {trigger: 'axis'},
+                legend: {data: ['入库', '取件']},
+                grid: {left: 40, right: 20, top: 40, bottom: 30},
+                xAxis: {type: 'category', data: dates},
+                yAxis: {type: 'value', minInterval: 1},
+                series: [
+                    {name: '入库', type: 'line', smooth: true, data: ins, itemStyle: {color: '#0d6efd'}, areaStyle: {opacity: .1}},
+                    {name: '取件', type: 'line', smooth: true, data: outs, itemStyle: {color: '#16a34a'}, areaStyle: {opacity: .1}}
+                ]
+            });
+            window.addEventListener('resize', function () { chart.resize(); });
+        });
+    }
+
+    function loadCompany() {
+        api.get('/api/stat/company').then(function (list) {
+            var chart = echarts.init(document.getElementById('companyChart'));
+            chart.setOption({
+                tooltip: {trigger: 'item', formatter: '{b}: {c} ({d}%)'},
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '68%'],
+                    data: list.map(function (r) { return {name: r.name, value: r.value}; })
+                }]
+            });
+            window.addEventListener('resize', function () { chart.resize(); });
+        });
+    }
+
+    $(function () {
+        loadOverview();
+        loadTrend();
+        loadCompany();
+    });
+</script>
+</body>
+</html>

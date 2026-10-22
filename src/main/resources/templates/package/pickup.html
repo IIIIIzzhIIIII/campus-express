@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('取件办理')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('pickup')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <h5 class="mb-3">取件办理</h5>
+            <div class="row">
+                <div class="col-lg-7">
+                    <div class="card">
+                        <div class="card-body">
+                            <ul class="nav nav-tabs mb-3" id="pickupTab" role="tablist">
+                                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-code" type="button">取件码</button></li>
+                                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-phone" type="button">手机号后四位 + 单号</button></li>
+                                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-scan" type="button">扫码枪扫单号</button></li>
+                            </ul>
+                            <div class="tab-content">
+                                <div class="tab-pane fade show active" id="tab-code">
+                                    <input class="form-control form-control-lg text-center" id="codeInput" placeholder="扫描或输入 6 位取件码" maxlength="6" style="font-size:22px;letter-spacing:4px">
+                                </div>
+                                <div class="tab-pane fade" id="tab-phone">
+                                    <div class="mb-3">
+                                        <label class="form-label">快递单号</label>
+                                        <input class="form-control" id="phoneTracking" placeholder="请输入快递单号">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">手机号后四位</label>
+                                        <input class="form-control" id="phoneTail" placeholder="请输入手机号后四位" maxlength="4">
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="tab-scan">
+                                    <input class="form-control form-control-lg" id="scanTracking" placeholder="扫描枪扫描快递单号" autofocus>
+                                </div>
+                            </div>
+                            <button class="btn btn-success btn-lg w-100 mt-3" onclick="doPickup()"><i class="bi bi-box-seam"></i> 确认取件</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card" id="resultCard" style="display:none">
+                        <div class="card-header text-success"><i class="bi bi-check-circle"></i> 取件成功</div>
+                        <div class="card-body">
+                            <div class="text-center mb-3">
+                                <i class="bi bi-check-circle-fill" style="font-size:48px;color:#16a34a"></i>
+                            </div>
+                            <table class="table table-sm">
+                                <tr><th style="width:90px">快递单号</th><td id="rTracking"></td></tr>
+                                <tr><th>快递公司</th><td id="rCompany"></td></tr>
+                                <tr><th>收件人</th><td id="rReceiver"></td></tr>
+                                <tr><th>取件方式</th><td id="rType"></td></tr>
+                                <tr><th>取件时间</th><td id="rTime"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">说明</div>
+                        <div class="card-body small text-muted">
+                            支持三种取件凭证方式：<br>1. 取件码；2. 手机号后四位 + 快递单号；3. 扫码枪扫单号。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var TYPE_DESC = {PICKUP_CODE: '取件码', PHONE_TAIL: '手机号后四位', SCAN: '扫码枪'};
+
+    function doPickup() {
+        var active = $('#pickupTab .nav-link.active').attr('data-bs-target');
+        var data = {};
+        if (active === '#tab-code') {
+            data.type = 'PICKUP_CODE';
+            data.pickupCode = $('#codeInput').val().trim();
+        } else if (active === '#tab-phone') {
+            data.type = 'PHONE_TAIL';
+            data.trackingNo = $('#phoneTracking').val().trim();
+            data.phone = $('#phoneTail').val().trim();
+        } else {
+            data.type = 'SCAN';
+            data.trackingNo = $('#scanTracking').val().trim();
+        }
+        api.post('/api/package/pickup', data).then(function (d) {
+            $('#resultCard').show();
+            $('#rTracking').text(d.trackingNo);
+            $('#rCompany').text(d.companyName);
+            $('#rReceiver').text(d.receiverName + ' ' + d.receiverPhone);
+            $('#rType').text(TYPE_DESC[d.pickupType] || d.pickupType);
+            $('#rTime').text(d.pickupTime);
+            toast('取件成功');
+            // 清空输入
+            $('#codeInput,#phoneTracking,#phoneTail,#scanTracking').val('');
+        });
+    }
+
+    $(function () {
+        // 从列表跳转带入单号
+        var tracking = new URLSearchParams(location.search).get('tracking');
+        if (tracking) {
+            $('#scanTracking').val(tracking);
+            $('#pickupTab button[data-bs-target="#tab-scan"]').tab('show');
+        }
+        $('#codeInput').on('keydown', function (e) { if (e.key === 'Enter') doPickup(); });
+        $('#scanTracking').on('keydown', function (e) { if (e.key === 'Enter') doPickup(); });
+    });
+</script>
+</body>
+</html>

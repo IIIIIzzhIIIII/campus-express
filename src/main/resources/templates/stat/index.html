@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('统计分析')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('stat')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">统计分析</h5>
+                <a href="/api/stat/export" class="btn btn-outline-success"><i class="bi bi-download"></i> 导出 Excel</a>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-md-3"><div class="stat-card"><div class="icon" style="background:#0d6efd"><i class="bi bi-inboxes"></i></div><div><div class="num" id="todayIn">0</div><div class="label">今日入库</div></div></div></div>
+                <div class="col-6 col-md-3"><div class="stat-card"><div class="icon" style="background:#16a34a"><i class="bi bi-box-seam"></i></div><div><div class="num" id="todayOut">0</div><div class="label">今日取件</div></div></div></div>
+                <div class="col-6 col-md-3"><div class="stat-card"><div class="icon" style="background:#6b7280"><i class="bi bi-boxes"></i></div><div><div class="num" id="totalCount">0</div><div class="label">累计入库</div></div></div></div>
+                <div class="col-6 col-md-3"><div class="stat-card"><div class="icon" style="background:#8b5cf6"><i class="bi bi-check2-circle"></i></div><div><div class="num" id="pickedCount">0</div><div class="label">累计取件</div></div></div></div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between">
+                    <span>每日入库 / 取件趋势</span>
+                    <select class="form-select form-select-sm" style="width:120px" id="daysSel" onchange="loadTrend()">
+                        <option value="7">近 7 天</option>
+                        <option value="14" selected>近 14 天</option>
+                        <option value="30">近 30 天</option>
+                    </select>
+                </div>
+                <div class="card-body"><div id="trendChart" style="height:340px"></div></div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="card h-100"><div class="card-header">快递公司占比</div><div class="card-body"><div id="companyChart" style="height:300px"></div></div></div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card h-100"><div class="card-header">操作员业绩（入库量）</div><div class="card-body"><div id="operatorChart" style="height:300px"></div></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    function loadOverview() {
+        api.get('/api/stat/overview').then(function (d) {
+            $('#todayIn').text(d.todayIn || 0);
+            $('#todayOut').text(d.todayOut || 0);
+            $('#totalCount').text(d.totalCount || 0);
+            $('#pickedCount').text(d.pickedCount || 0);
+        });
+    }
+
+    function loadTrend() {
+        var days = $('#daysSel').val();
+        api.get('/api/stat/daily', {days: days}).then(function (list) {
+            var dates = [], ins = [], outs = [];
+            list.forEach(function (r) {
+                dates.push(r.date.substring(5));
+                ins.push(r.inCount || 0);
+                outs.push(r.outCount || 0);
+            });
+            var chart = echarts.init(document.getElementById('trendChart'));
+            chart.setOption({
+                tooltip: {trigger: 'axis'},
+                legend: {data: ['入库', '取件']},
+                grid: {left: 40, right: 20, top: 40, bottom: 30},
+                xAxis: {type: 'category', data: dates},
+                yAxis: {type: 'value', minInterval: 1},
+                series: [
+                    {name: '入库', type: 'bar', data: ins, itemStyle: {color: '#0d6efd'}},
+                    {name: '取件', type: 'line', smooth: true, data: outs, itemStyle: {color: '#16a34a'}}
+                ]
+            });
+            window.addEventListener('resize', function () { chart.resize(); });
+        });
+    }
+
+    function loadCompany() {
+        api.get('/api/stat/company').then(function (list) {
+            var chart = echarts.init(document.getElementById('companyChart'));
+            chart.setOption({
+                tooltip: {trigger: 'item', formatter: '{b}: {c} ({d}%)'},
+                series: [{type: 'pie', radius: ['40%', '68%'], data: list.map(function (r) { return {name: r.name, value: r.value}; })}]
+            });
+            window.addEventListener('resize', function () { chart.resize(); });
+        });
+    }
+
+    function loadOperator() {
+        api.get('/api/stat/operator').then(function (list) {
+            var chart = echarts.init(document.getElementById('operatorChart'));
+            chart.setOption({
+                tooltip: {trigger: 'axis'},
+                grid: {left: 50, right: 20, top: 30, bottom: 30},
+                xAxis: {type: 'category', data: list.map(function (r) { return r.name; })},
+                yAxis: {type: 'value', minInterval: 1},
+                series: [{type: 'bar', data: list.map(function (r) { return r.total; }), itemStyle: {color: '#8b5cf6'}, barWidth: 36}]
+            });
+            window.addEventListener('resize', function () { chart.resize(); });
+        });
+    }
+
+    $(function () {
+        loadOverview(); loadTrend(); loadCompany(); loadOperator();
+    });
+</script>
+</body>
+</html>

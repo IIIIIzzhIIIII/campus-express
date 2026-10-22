@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('数据大屏')}"></head>
+<body class="screen-page">
+<!-- 返回上页 -->
+<div class="screen-back">
+    <button type="button" class="back-btn" onclick="goBack()" title="返回上页（Esc）">
+        <span class="back-ico"><i class="bi bi-arrow-left"></i></span>
+        <span>返回上页</span>
+    </button>
+</div>
+
+<div class="container-fluid p-4">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold" style="color:#4f9cff"><i class="bi bi-boxes"></i> 校园快递驿站数据大屏</h2>
+        <div class="text-white-50" id="clock"></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="num" id="todayIn">0</div><div>今日入库</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="num" id="todayOut">0</div><div>今日取件</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="num" id="stayCount">0</div><div>滞留件</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box"><div class="num" id="totalCount">0</div><div>累计快件</div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="stat-box"><div id="trendChart" style="height:400px"></div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stat-box"><div id="companyChart" style="height:400px"></div></div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    function loadOverview() {
+        api.get('/api/stat/overview').then(function (d) {
+            $('#todayIn').text(d.todayIn || 0);
+            $('#todayOut').text(d.todayOut || 0);
+            $('#stayCount').text(d.stayCount || 0);
+            $('#totalCount').text(d.totalCount || 0);
+        });
+    }
+
+    function loadTrend() {
+        api.get('/api/stat/daily', {days: 14}).then(function (list) {
+            var dates = [], ins = [], outs = [];
+            list.forEach(function (r) { dates.push(r.date.substring(5)); ins.push(r.inCount || 0); outs.push(r.outCount || 0); });
+            var chart = echarts.init(document.getElementById('trendChart'));
+            chart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: {trigger: 'axis'},
+                legend: {data: ['入库', '取件'], textStyle: {color: '#e5e7eb'}},
+                grid: {left: 40, right: 20, top: 40, bottom: 30},
+                xAxis: {type: 'category', data: dates, axisLabel: {color: '#9ca3af'}},
+                yAxis: {type: 'value', minInterval: 1, axisLabel: {color: '#9ca3af'}, splitLine: {lineStyle: {color: 'rgba(255,255,255,.08)'}}},
+                series: [
+                    {name: '入库', type: 'line', smooth: true, data: ins, itemStyle: {color: '#4f9cff'}, areaStyle: {opacity: .15}},
+                    {name: '取件', type: 'line', smooth: true, data: outs, itemStyle: {color: '#34d399'}, areaStyle: {opacity: .15}}
+                ]
+            });
+            window.addEventListener('resize', function () { chart.resize(); });
+        });
+    }
+
+    function loadCompany() {
+        api.get('/api/stat/company').then(function (list) {
+            var chart = echarts.init(document.getElementById('companyChart'));
+            chart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: {trigger: 'item', formatter: '{b}: {c} ({d}%)'},
+                series: [{type: 'pie', radius: ['35%', '65%'], label: {color: '#e5e7eb'},
+                    data: list.map(function (r) { return {name: r.name, value: r.value}; })}]
+            });
+            window.addEventListener('resize', function () { chart.resize(); });
+        });
+    }
+
+    function tick() {
+        $('#clock').text(new Date().toLocaleString('zh-CN'));
+    }
+
+    // 返回上页：有站内来源页则返回上一页，否则回到后台工作台
+    function goBack() {
+        if (document.referrer && document.referrer.indexOf(location.origin) === 0) {
+            history.back();
+        } else {
+            location.href = '/index';
+        }
+    }
+
+    $(function () {
+        loadOverview(); loadTrend(); loadCompany();
+        tick(); setInterval(tick, 1000);
+        setInterval(function () { loadOverview(); loadTrend(); loadCompany(); }, 30000);
+        // 快捷键：Esc 返回上页
+        $(document).on('keydown', function (e) {
+            if (e.key === 'Escape') { goBack(); }
+        });
+    });
+</script>
+</body>
+</html>

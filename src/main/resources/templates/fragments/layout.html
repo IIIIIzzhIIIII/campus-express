@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+
+<!-- 公共 head -->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - 校园快递驿站管理系统'">校园快递驿站管理系统</title>
+    <link rel="stylesheet" th:href="@{/lib/bootstrap/bootstrap.min.css}">
+    <link rel="stylesheet" th:href="@{/lib/bootstrap-icons/bootstrap-icons.min.css}">
+    <link rel="stylesheet" th:href="@{/css/common.css(v='20260915')}">
+</head>
+
+<!-- 公共脚本 -->
+<th:block th:fragment="scripts">
+    <script th:src="@{/lib/jquery/jquery.min.js}"></script>
+    <script th:src="@{/lib/bootstrap/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/lib/echarts/echarts.min.js}"></script>
+    <script th:src="@{/js/common.js(v='20260915')}"></script>
+</th:block>
+
+<!-- 侧边栏 -->
+<aside class="sidebar" th:fragment="sidebar(active)">
+    <div class="brand"><i class="bi bi-boxes"></i> 校园快递驿站</div>
+    <nav class="menu">
+        <div class="menu-title">导航</div>
+        <a th:href="@{/index}" th:classappend="${active=='index'}?'active':''"><i class="bi bi-house"></i> 工作台</a>
+
+        <div class="menu-title">快件管理</div>
+        <a th:href="@{/package/in}" th:classappend="${active=='in'}?'active':''"><i class="bi bi-inboxes"></i> 快件入库</a>
+        <a th:href="@{/package/list}" th:classappend="${active=='list'}?'active':''"><i class="bi bi-list-ul"></i> 快件列表</a>
+        <a th:href="@{/package/pickup}" th:classappend="${active=='pickup'}?'active':''"><i class="bi bi-box-seam"></i> 取件办理</a>
+        <a th:href="@{/order/send}" th:classappend="${active=='send'}?'active':''"><i class="bi bi-send"></i> 寄件订单</a>
+        <a th:href="@{/order/deposit}" th:classappend="${active=='deposit'}?'active':''"><i class="bi bi-archive"></i> 存件管理</a>
+        <a th:href="@{/problem/list}" th:classappend="${active=='problem'}?'active':''"><i class="bi bi-exclamation-triangle"></i> 问题件管理</a>
+
+        <div class="menu-title">数据统计</div>
+        <a th:href="@{/stat}" th:classappend="${active=='stat'}?'active':''"><i class="bi bi-bar-chart"></i> 统计分析</a>
+        <a th:href="@{/screen}" th:classappend="${active=='screen'}?'active':''"><i class="bi bi-display"></i> 大屏看板</a>
+
+        <div class="menu-title">用户端</div>
+        <a th:href="@{/student}" target="_blank"><i class="bi bi-phone"></i> 学生端入口</a>
+
+        <div class="menu-title">基础数据</div>
+        <a th:href="@{/basic/company}" th:classappend="${active=='company'}?'active':''"><i class="bi bi-truck"></i> 快递公司</a>
+        <a th:href="@{/basic/shelf}" th:classappend="${active=='shelf'}?'active':''"><i class="bi bi-grid"></i> 货架库位</a>
+
+        <th:block th:if="${session.loginUser.roleCode == 'SUPER_ADMIN'}">
+            <div class="menu-title">系统管理</div>
+            <a th:href="@{/system/user}" th:classappend="${active=='user'}?'active':''"><i class="bi bi-people"></i> 用户管理</a>
+            <a th:href="@{/system/operlog}" th:classappend="${active=='operlog'}?'active':''"><i class="bi bi-journal-text"></i> 操作日志</a>
+            <a th:href="@{/system/loginlog}" th:classappend="${active=='loginlog'}?'active':''"><i class="bi bi-shield-lock"></i> 登录日志</a>
+        </th:block>
+    </nav>
+</aside>
+
+<!-- 顶栏 -->
+<nav class="topbar" th:fragment="topbar">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-sm d-md-none" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <span class="text-muted small d-none d-md-inline">校园快递驿站管理系统</span>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <span class="text-muted small">
+            <i class="bi bi-person-circle"></i>
+            <span th:text="${session.loginUser.realName}">管理员</span>
+            <span class="badge text-bg-light ms-1"
+                  th:text="${session.loginUser.roleCode == 'SUPER_ADMIN' ? '超级管理员' : '驿站员工'}">超级管理员</span>
+        </span>
+        <button class="btn btn-outline-secondary btn-sm" onclick="logout()"><i class="bi bi-box-arrow-right"></i> 退出</button>
+    </div>
+</nav>
+
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('快递公司')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('company')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">快递公司管理</h5>
+                <button class="btn btn-primary" id="btnAdd"><i class="bi bi-plus-lg"></i> 新增公司</button>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><input class="form-control form-control-sm" id="qKeyword" placeholder="名称/编码"></div>
+                        <div class="col-md-2"><button class="btn btn-primary btn-sm w-100" onclick="load(1)">查询</button></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead><tr><th>编码</th><th>名称</th><th>排序</th><th>状态</th><th style="width:160px">操作</th></tr></thead>
+                            <tbody id="tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap"><div class="text-muted small" id="pageInfo"></div><div id="pager"></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title" id="modalTitle">新增公司</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <input type="hidden" id="eId">
+            <div class="mb-3"><label class="form-label">公司编码</label><input class="form-control" id="eCode"></div>
+            <div class="mb-3"><label class="form-label">公司名称</label><input class="form-control" id="eName"></div>
+            <div class="mb-3"><label class="form-label">排序</label><input type="number" class="form-control" id="eSort" value="0"></div>
+            <div class="mb-3"><label class="form-label">状态</label>
+                <select class="form-select" id="eStatus"><option value="1">启用</option><option value="0">停用</option></select>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-primary" onclick="save()">保存</button></div>
+    </div></div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var page = 1, size = 10;
+    var isAdmin = /*[[${session.loginUser.roleCode == 'SUPER_ADMIN'}]]*/ false;
+
+    function load(p) {
+        page = p || 1;
+        api.get('/api/company/page', {page: page, size: size, keyword: $('#qKeyword').val().trim()}).then(function (d) {
+            var html = '';
+            d.records.forEach(function (r) {
+                var ops = '-';
+                if (isAdmin) ops = '<button class="btn btn-sm btn-outline-primary me-1" onclick="edit(' + r.id + ')">编辑</button>'
+                    + '<button class="btn btn-sm btn-outline-danger" onclick="del(' + r.id + ')">删除</button>';
+                html += '<tr><td>' + esc(r.companyCode) + '</td><td>' + esc(r.companyName) + '</td><td>' + r.sort + '</td>'
+                    + '<td>' + (r.status === 1 ? '<span class="badge-soft text-bg-success">启用</span>' : '<span class="badge-soft text-bg-secondary">停用</span>') + '</td>'
+                    + '<td>' + ops + '</td></tr>';
+            });
+            $('#tbody').html(html || '<tr><td colspan="5" class="text-center text-muted py-4">暂无数据</td></tr>');
+            renderPager($('#pager'), page, size, d.total, load);
+            $('#pageInfo').text('第 ' + page + ' 页');
+        });
+    }
+
+    function resetForm() { $('#eId,#eCode,#eName').val(''); $('#eSort').val(0); $('#eStatus').val(1); }
+
+    function edit(id) {
+        api.get('/api/company/page', {page: 1, size: 50}).then(function (d) {
+            var r = d.records.find(function (x) { return x.id === id; });
+            if (!r) return;
+            $('#eId').val(r.id); $('#eCode').val(r.companyCode); $('#eName').val(r.companyName);
+            $('#eSort').val(r.sort); $('#eStatus').val(r.status);
+            $('#modalTitle').text('编辑公司');
+            $('#editModal').modal('show');
+        });
+    }
+
+    function save() {
+        var data = {companyCode: $('#eCode').val().trim(), companyName: $('#eName').val().trim(), sort: parseInt($('#eSort').val() || 0), status: parseInt($('#eStatus').val())};
+        var id = $('#eId').val();
+        var p = id ? api.put('/api/company', $.extend({id: parseInt(id)}, data)) : api.post('/api/company', data);
+        p.then(function () { toast('保存成功'); $('#editModal').modal('hide'); load(page); });
+    }
+
+    function del(id) {
+        if (!confirm('确认删除？')) return;
+        api.del('/api/company/' + id).then(function () { toast('删除成功'); load(page); });
+    }
+
+    $(function () {
+        if (!isAdmin) $('#btnAdd').hide();
+        $('#btnAdd').on('click', function () { resetForm(); $('#modalTitle').text('新增公司'); $('#editModal').modal('show'); });
+        load(1);
+    });
+</script>
+</body>
+</html>

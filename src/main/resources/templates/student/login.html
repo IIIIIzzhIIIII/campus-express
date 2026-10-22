@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/student :: head('登录')}"></head>
+<body class="bg-light">
+<div class="login-page" style="background:linear-gradient(135deg,#1f2937,#0d6efd)">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <i class="bi bi-boxes" style="font-size:42px;color:#0d6efd"></i>
+            <h4 class="mt-2 mb-0">校园快递驿站 · 用户端</h4>
+            <p class="text-muted small mb-0">查快递 · 寄快递 · 存快递</p>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">账号</label>
+            <input class="form-control" id="username" placeholder="学号 / 手机号" autofocus>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">密码</label>
+            <input type="password" class="form-control" id="password" placeholder="请输入密码">
+        </div>
+        <button class="btn btn-primary w-100" onclick="doLogin()">登 录</button>
+        <p class="text-muted small text-center mt-3 mb-0">
+            还没有账号？<a href="/student/register">立即注册</a>
+        </p>
+        <hr>
+        <p class="text-muted small text-center mb-0">
+            <a href="/student/query">免登录查询快递</a> ·
+            <a href="/student">返回首页</a>
+        </p>
+    </div>
+</div>
+<th:block th:replace="~{fragments/student :: scripts}"></th:block>
+<script>
+    function doLogin() {
+        var username = $('#username').val().trim();
+        var password = $('#password').val();
+        if (!username || !password) { toast('请输入账号和密码', 'warning'); return; }
+        api.post('/api/student/login', {username: username, password: password}).then(function () {
+            toast('登录成功');
+            setTimeout(function () { location.href = '/student/center'; }, 500);
+        });
+    }
+
+    $(function () {
+        $('#password').on('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+    });
+</script>
+</body>
+</html>

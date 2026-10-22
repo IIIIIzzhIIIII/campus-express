@@ -1,0 +1,30 @@
+# =====================================================
+# 单机版配置（H2 嵌入式数据库，无需安装 MySQL）
+# 启动方式：java -jar campus-express.jar --spring.profiles.active=standalone
+# 数据文件：%USERPROFILE%\.campus-express\data\campus_express.mv.db
+# 重置数据：关闭程序后删除 %USERPROFILE%\.campus-express 目录即可
+# =====================================================
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    # MODE=MySQL 让 H2 兼容 MySQL 语法；DATABASE_TO_LOWER 保证 `package` 等反引号标识符可匹配
+    url: jdbc:h2:file:${user.home}/.campus-express/data/campus_express;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    username: sa
+    password: ""
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 5
+      connection-timeout: 30000
+
+campus:
+  # 单机版启动后自动打开浏览器
+  open-browser: true
+  # 显示系统托盘图标（双击打开系统，右键退出）
+  tray-icon: true
+
+logging:
+  level:
+    com.campus.express: info
+  file:
+    # 双击 exe 运行没有控制台，日志写到数据目录，便于排查问题
+    name: ${user.home}/.campus-express/logs/campus-express.log

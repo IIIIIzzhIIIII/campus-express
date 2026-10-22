@@ -1,0 +1,79 @@
+server:
+  port: 8081
+  servlet:
+    session:
+      timeout: 8h
+
+spring:
+  application:
+    name: campus-express
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/campus_express?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    # 默认账号密码，可通过环境变量覆盖：DB_USERNAME / DB_PASSWORD
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 30000
+  thymeleaf:
+    cache: false
+    encoding: UTF-8
+    mode: HTML
+  # 静态资源（JS/CSS）不做强缓存：协商缓存，改完刷新即生效，避免浏览器用旧文件
+  # 防止出现「函数未定义」这类因缓存旧 common.js 导致的问题
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.campus.express.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Knife4j / OpenAPI 文档
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+# 业务自定义参数
+campus:
+  # 滞留天数：超过 N 天未取件自动标记为滞留
+  stay-days: 3
+  # 取件码位数
+  pickup-code-length: 6
+  # 是否启用模拟短信（写日志）
+  mock-sms: true
+  # 启动完成后是否自动打开浏览器（单机版 / exe 中开启）
+  open-browser: false
+
+logging:
+  level:
+    com.campus.express: info

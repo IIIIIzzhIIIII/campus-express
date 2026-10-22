@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/student :: head('注册')}"></head>
+<body class="bg-light">
+<div th:replace="~{fragments/student :: navbar('register')}"></div>
+
+<div class="container py-4" style="max-width:640px">
+    <div class="card">
+        <div class="card-header"><i class="bi bi-person-plus me-1"></i>注册用户端账号</div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">账号 <span class="text-danger">*</span></label>
+                <input class="form-control" id="username" placeholder="4-20 位，建议使用学号" autofocus>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">姓名 <span class="text-danger">*</span></label>
+                <input class="form-control" id="realName" placeholder="请输入真实姓名">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">手机号 <span class="text-danger">*</span></label>
+                <input class="form-control" id="phone" placeholder="11 位手机号，取件/寄件都会用到">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">密码 <span class="text-danger">*</span></label>
+                <input type="password" class="form-control" id="password" placeholder="6-20 位">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">确认密码 <span class="text-danger">*</span></label>
+                <input type="password" class="form-control" id="confirmPassword" placeholder="再次输入密码">
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-success px-4" onclick="doRegister()">注 册</button>
+                <a class="btn btn-outline-secondary" href="/student/login">已有账号，去登录</a>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body small text-muted">
+            注册后可享受：① 寄快递在线下单并查看物流；② 存快递（寄存）申请与存件码；③ 查看我的快递与取件码。
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/student :: scripts}"></th:block>
+<script>
+    function doRegister() {
+        var data = {
+            username: $('#username').val().trim(),
+            realName: $('#realName').val().trim(),
+            phone: $('#phone').val().trim(),
+            password: $('#password').val(),
+            confirmPassword: $('#confirmPassword').val()
+        };
+        if (!data.username || !data.realName || !data.phone || !data.password) {
+            toast('请完整填写注册信息', 'warning');
+            return;
+        }
+        api.post('/api/student/register', data).then(function () {
+            api.post('/api/student/login', {username: data.username, password: data.password}).then(function () {
+                toast('注册成功');
+                setTimeout(function () { location.href = '/student/center'; }, 500);
+            });
+        });
+    }
+</script>
+</body>
+</html>

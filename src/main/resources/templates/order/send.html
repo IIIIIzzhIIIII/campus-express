@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('寄件订单')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('send')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">寄件订单管理</h5>
+                <span class="text-muted small">用户端在线寄件 → 驿站揽收（回填运单号）→ 更新物流状态</span>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <input class="form-control form-control-sm" id="qKeyword" placeholder="寄件单号/运单号/姓名/手机号">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm" id="qStatus">
+                                <option value="">全部状态</option>
+                                <option value="0">待揽收</option>
+                                <option value="1">已揽收</option>
+                                <option value="2">运输中</option>
+                                <option value="3">派送中</option>
+                                <option value="4">已签收</option>
+                                <option value="5">已取消</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary btn-sm w-100" onclick="load(1)">查询</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>寄件单号</th>
+                                <th>下单学生</th>
+                                <th>快递公司</th>
+                                <th>运单号</th>
+                                <th>寄件信息</th>
+                                <th>收件信息</th>
+                                <th>状态</th>
+                                <th>下单时间</th>
+                                <th style="width:230px">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap">
+                        <div class="text-muted small" id="pageInfo"></div>
+                        <div id="pager"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- 揽收 -->
+<div class="modal fade" id="collectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">驿站揽收</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cId">
+                <div class="mb-3">
+                    <label class="form-label">寄件单号</label>
+                    <input class="form-control" id="cOrderNo" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">运单号 <span class="text-danger">*</span></label>
+                    <input class="form-control" id="cTrackingNo" placeholder="请输入快递运单号">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">揽收地点</label>
+                    <input class="form-control" id="cLocation" placeholder="如：校园快递驿站">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="doCollect()">确认揽收</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 更新物流 -->
+<div class="modal fade" id="trackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">更新物流状态</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="tId">
+                <div class="mb-3">
+                    <label class="form-label">物流状态 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="tStatus">
+                        <option value="2">运输中</option>
+                        <option value="3">派送中</option>
+                        <option value="4">已签收</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">所在网点/城市</label>
+                    <input class="form-control" id="tLocation" placeholder="如：南京转运中心">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">轨迹描述</label>
+                    <input class="form-control" id="tContent" placeholder="留空则按状态自动生成">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" onclick="doTrack()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 物流轨迹 -->
+<div class="modal fade" id="logModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">物流轨迹</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="list-unstyled mb-0" id="logList"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var page = 1, size = 10;
+
+    function load(p) {
+        page = p || 1;
+        api.get('/api/send/page', {
+            page: page,
+            size: size,
+            keyword: $('#qKeyword').val().trim(),
+            status: $('#qStatus').val()
+        }).then(function (d) {
+            var html = '';
+            d.records.forEach(function (r) {
+                var ops = '';
+                if (r.status === 0) {
+                    ops += '<button class="btn btn-sm btn-success me-1" onclick="openCollect(' + r.id + ')">揽收</button>';
+                }
+                if (r.status >= 1 && r.status <= 3) {
+                    ops += '<button class="btn btn-sm btn-outline-primary me-1" onclick="openTrack(' + r.id + ')">更新物流</button>';
+                }
+                ops += '<button class="btn btn-sm btn-outline-secondary me-1" onclick="openLogs(' + r.id + ')">轨迹</button>';
+                if (r.status <= 3) {
+                    ops += '<button class="btn btn-sm btn-outline-danger" onclick="cancelOrder(' + r.id + ')">取消</button>';
+                }
+                html += '<tr>'
+                    + '<td class="small">' + esc(r.orderNo) + '</td>'
+                    + '<td>' + esc(r.studentName || '-')
+                    + '<div class="text-muted small">' + esc(r.studentPhone || '') + '</div></td>'
+                    + '<td>' + esc(r.companyName || '-') + '</td>'
+                    + '<td class="small">' + esc(r.trackingNo || '-') + '</td>'
+                    + '<td class="small">' + esc(r.senderName) + ' ' + esc(r.senderPhone)
+                    + '<div class="text-muted">取件地点：' + esc(r.senderAddress) + '</div>'
+                    + '<div class="text-muted">物品：' + esc(r.itemName)
+                    + (r.weight ? ' / ' + r.weight + 'kg' : '') + '</div></td>'
+                    + '<td class="small">' + esc(r.receiverName) + ' ' + esc(r.receiverPhone)
+                    + '<div class="text-muted">' + esc(r.receiverAddress) + '</div></td>'
+                    + '<td>' + sendStatusBadge(r.status) + '</td>'
+                    + '<td class="small">' + esc(r.createTime) + '</td>'
+                    + '<td>' + ops + '</td></tr>';
+            });
+            $('#tbody').html(html || '<tr><td colspan="9" class="text-center text-muted py-4">暂无寄件订单</td></tr>');
+            renderPager($('#pager'), page, size, d.total, load);
+            $('#pageInfo').text('第 ' + page + ' 页');
+        });
+    }
+
+    function openCollect(id) {
+        $('#cId').val(id);
+        $('#cOrderNo,#cTrackingNo,#cLocation').val('');
+        api.get('/api/send/detail/' + id).then(function (d) {
+            $('#cOrderNo').val(d.orderNo);
+            $('#collectModal').modal('show');
+        });
+    }
+
+    function doCollect() {
+        var trackingNo = $('#cTrackingNo').val().trim();
+        if (!trackingNo) { toast('请输入运单号', 'warning'); return; }
+        api.post('/api/send/collect/' + $('#cId').val(), {
+            trackingNo: trackingNo,
+            location: $('#cLocation').val().trim()
+        }).then(function () {
+            toast('揽收成功');
+            $('#collectModal').modal('hide');
+            load(page);
+        });
+    }
+
+    function openTrack(id) {
+        $('#tId').val(id);
+        $('#tStatus').val('2');
+        $('#tLocation,#tContent').val('');
+        $('#trackModal').modal('show');
+    }
+
+    function doTrack() {
+        api.post('/api/send/status', {
+            id: parseInt($('#tId').val()),
+            status: parseInt($('#tStatus').val()),
+            location: $('#tLocation').val().trim(),
+            content: $('#tContent').val().trim()
+        }).then(function () {
+            toast('物流状态已更新');
+            $('#trackModal').modal('hide');
+            load(page);
+        });
+    }
+
+    function openLogs(id) {
+        $('#logList').html('<li class="text-muted small">加载中...</li>');
+        $('#logModal').modal('show');
+        api.get('/api/send/logs/' + id).then(function (logs) {
+            renderTimeline($('#logList'), logs);
+        });
+    }
+
+    function cancelOrder(id) {
+        if (!confirm('确认取消该寄件订单？')) return;
+        api.post('/api/send/cancel/' + id).then(function () {
+            toast('已取消寄件订单');
+            load(page);
+        });
+    }
+
+    $(function () { load(1); });
+</script>
+</body>
+</html>

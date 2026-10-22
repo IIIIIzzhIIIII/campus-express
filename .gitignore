@@ -1,0 +1,58 @@
+# ===== 构建产物 =====
+target/
+build/
+out/
+dist/
+release/
+*.class
+*.jar
+*.war
+*.exe
+*.msi
+*.zip
+
+# ===== IDE =====
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+*.ipr
+*.iws
+
+# ===== 工具生成（保留 .github 目录本身，便于放置 GitHub Actions）=====
+.github/modernize/
+
+# ===== 日志 / 运行时数据 =====
+logs/
+*.log
+data/
+.campus-express/
+config/application.yml
+config/application-local.yml
+
+# ===== 论文 / 学校材料（严禁上传）=====
+*.doc
+*.docx
+*.pdf
+*.ppt
+*.pptx
+*.wps
+*.dps
+*.caj
+论文/
+毕业论文/
+开题报告/
+任务书/
+查重报告/
+答辩/
+
+# ===== 系统 / 临时文件 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+~$*
+

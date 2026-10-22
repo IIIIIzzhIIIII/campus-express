@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('快件详情')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('list')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <div class="d-flex align-items-center mb-3">
+                <a href="/package/list" class="btn btn-sm btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i></a>
+                <h5 class="mb-0">快件详情</h5>
+            </div>
+            <div class="row">
+                <div class="col-lg-7">
+                    <div class="card">
+                        <div class="card-header">快件信息</div>
+                        <div class="card-body">
+                            <table class="table table-sm mb-0">
+                                <tr><th style="width:110px">快递单号</th><td id="dTracking"></td><th style="width:110px">快递公司</th><td id="dCompany"></td></tr>
+                                <tr><th>收件人</th><td id="dReceiver"></td><th>手机号</th><td id="dPhone"></td></tr>
+                                <tr><th>取件码</th><td id="dCode" class="fw-bold"></td><th>货架</th><td id="dShelf"></td></tr>
+                                <tr><th>状态</th><td id="dStatus"></td><th>取件方式</th><td id="dPickupType"></td></tr>
+                                <tr><th>入库时间</th><td id="dInTime"></td><th>通知时间</th><td id="dNoticeTime"></td></tr>
+                                <tr><th>取件时间</th><td id="dPickupTime"></td><th>通知次数</th><td id="dNoticeCount"></td></tr>
+                                <tr><th>操作员</th><td id="dOperator"></td><th>备注</th><td id="dRemark"></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card">
+                        <div class="card-header">操作记录</div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0" id="logList"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var pid = /*[[${id}]]*/ 0;
+
+    function loadDetail() {
+        api.get('/api/package/detail/' + pid).then(function (d) {
+            $('#dTracking').text(d.trackingNo);
+            $('#dCompany').text(d.companyName);
+            $('#dReceiver').text(d.receiverName);
+            $('#dPhone').text(d.receiverPhone);
+            $('#dCode').text(d.pickupCode);
+            $('#dShelf').text(d.shelfNo);
+            $('#dStatus').html(statusBadge(d.status, d.statusDesc));
+            $('#dPickupType').text(d.pickupTypeDesc || '-');
+            $('#dInTime').text(d.inTime || '-');
+            $('#dNoticeTime').text(d.noticeTime || '-');
+            $('#dPickupTime').text(d.pickupTime || '-');
+            $('#dNoticeCount').text(d.noticeCount || 0);
+            $('#dOperator').text(d.operatorName || '-');
+            $('#dRemark').text(d.remark || '-');
+        });
+        api.get('/api/package/logs/' + pid).then(function (logs) {
+            var html = '';
+            logs.forEach(function (l) {
+                html += '<li class="position-relative ps-3 pb-3 border-start">'
+                    + '<div class="small fw-bold">' + esc(l.content) + '</div>'
+                    + '<div class="text-muted small">' + esc(l.operatorName || '系统') + ' · ' + esc(l.createTime) + '</div>'
+                    + '</li>';
+            });
+            $('#logList').html(html || '<li class="text-muted small">暂无操作记录</li>');
+        });
+    }
+
+    $(function () { loadDetail(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('操作日志')}"></head>
+<body>
+<div class="app">
+    <aside th:replace="~{fragments/layout :: sidebar('operlog')}"></aside>
+    <div class="main">
+        <nav th:replace="~{fragments/layout :: topbar}"></nav>
+        <main class="content">
+            <h5 class="mb-3">操作日志</h5>
+            <div class="card">
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><input class="form-control form-control-sm" id="qKeyword" placeholder="操作人/操作描述/模块"></div>
+                        <div class="col-md-2"><button class="btn btn-primary btn-sm w-100" onclick="load(1)">查询</button></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead><tr><th>操作人</th><th>模块</th><th>操作描述</th><th>IP</th><th>状态</th><th>耗时</th><th>操作时间</th></tr></thead>
+                            <tbody id="tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-wrap"><div class="text-muted small" id="pageInfo"></div><div id="pager"></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+<script>
+    var page = 1, size = 10;
+    function load(p) {
+        page = p || 1;
+        api.get('/api/log/oper', {page: page, size: size, keyword: $('#qKeyword').val().trim()}).then(function (d) {
+            var html = '';
+            d.records.forEach(function (r) {
+                html += '<tr><td>' + esc(r.username) + '</td><td>' + esc(r.module) + '</td><td>' + esc(r.operation) + '</td>'
+                    + '<td>' + esc(r.ip) + '</td>'
+                    + '<td>' + (r.status === 1 ? '<span class="badge-soft text-bg-success">成功</span>' : '<span class="badge-soft text-bg-danger">失败</span>') + '</td>'
+                    + '<td>' + (r.costTime != null ? r.costTime + 'ms' : '-') + '</td>'
+                    + '<td class="small">' + esc(r.createTime) + '</td></tr>';
+            });
+            $('#tbody').html(html || '<tr><td colspan="7" class="text-center text-muted py-4">暂无数据</td></tr>');
+            renderPager($('#pager'), page, size, d.total, load);
+            $('#pageInfo').text('第 ' + page + ' 页');
+        });
+    }
+    $(function () { load(1); });
+</script>
+</body>
+</html>
