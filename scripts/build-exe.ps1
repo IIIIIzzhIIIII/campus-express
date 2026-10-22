@@ -76,7 +76,8 @@ try {
 
     Write-Host '==> 4/4 生成 zip 压缩包' -ForegroundColor Cyan
     $zip = Join-Path $dist "CampusExpress-$Version-win-x64.zip"
-    Compress-Archive -Path (Join-Path $dist 'CampusExpress\*') -DestinationPath $zip -Force
+    # 压缩包内保留 CampusExpress 顶层目录，解压后直接得到 CampusExpress\CampusExpress.exe
+Compress-Archive -Path (Join-Path $dist 'CampusExpress') -DestinationPath $zip -Force
 
     Write-Host ''
     Write-Host '打包完成：' -ForegroundColor Green
