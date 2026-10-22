@@ -45,6 +45,10 @@ java -jar target\campus-express.jar --spring.profiles.active=standalone
 
 ## 3. 打包 exe（内置 JRE）
 
+> 不想自己打包？可直接从
+> [Releases](https://github.com/IIIIIzzhIIIII/campus-express/releases/latest)
+> 下载已打包好的 `CampusExpress-1.0.0-win-x64.zip`。
+
 前置条件：安装 **JDK 17 及以上完整版**（需带 `jpackage`、`jlink`），并确保 `JAVA_HOME` 指向它。
 
 ```powershell

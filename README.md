@@ -6,6 +6,9 @@
 > - **标准版**：MySQL 8.0 + JDK 17（适合开发、答辩演示环境已装数据库的情况）
 > - **单机版 / exe**：内置 H2 文件数据库 + 内置 JRE，**双击即用，无需安装 MySQL / JDK**（见 [单机版与 exe 运行说明](docs/05-单机版与exe运行说明.md)）
 
+> **直接下载 Windows 单机版**：打开 [Releases](https://github.com/IIIIIzzhIIIII/campus-express/releases/latest)，
+> 下载 `CampusExpress-1.0.0-win-x64.zip`，解压后双击 `CampusExpress\CampusExpress.exe` 即可运行。
+
 ## 技术栈
 
 | 层级 | 技术 |
